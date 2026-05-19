@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 25% 5%;
+    --foreground: 220 15% 92%;
+    --card: 222 22% 8%;
+    --card-foreground: 220 15% 92%;
+    --border: 220 15% 13%;
+    --input: 220 15% 11%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 15% 13%;
+    --secondary-foreground: 220 10% 65%;
+    --muted: 220 15% 13%;
+    --muted-foreground: 220 10% 42%;
+    --accent: 220 15% 15%;
+    --accent-foreground: 220 10% 80%;
+    --destructive: 350 89% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 239 84% 67%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  ::-webkit-scrollbar { display: none; }
+}
+
+@layer utilities {
+  .font-mono { font-family: 'DM Mono', monospace !important; }
+  .glass {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  .progress-track {
+    height: 5px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.7s cubic-bezier(0.16,1,0.3,1);
+  }
+  .animate-slide-up {
+    animation: slideUp 0.38s cubic-bezier(0.16,1,0.3,1) both;
+  }
+  @keyframes slideUp {
+    from { opacity:0; transform:translateY(20px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+}
