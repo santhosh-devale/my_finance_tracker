@@ -5,24 +5,48 @@
 
 @layer base {
   :root {
-    --background: 222 25% 5%;
-    --foreground: 220 15% 92%;
-    --card: 222 22% 8%;
-    --card-foreground: 220 15% 92%;
-    --border: 220 15% 13%;
-    --input: 220 15% 11%;
-    --primary: 239 84% 67%;
+    /* Light theme (default & daytime) */
+    --background: 220 40% 96%;
+    --foreground: 220 30% 8%;
+    --card: 220 15% 100%;
+    --card-foreground: 220 25% 8%;
+    --border: 220 25% 88%;
+    --input: 220 20% 94%;
+    --primary: 239 84% 55%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 15% 13%;
-    --secondary-foreground: 220 10% 65%;
-    --muted: 220 15% 13%;
-    --muted-foreground: 220 10% 42%;
-    --accent: 220 15% 15%;
-    --accent-foreground: 220 10% 80%;
-    --destructive: 350 89% 60%;
+    --secondary: 220 15% 20%;
+    --secondary-foreground: 220 10% 15%;
+    --muted: 220 20% 85%;
+    --muted-foreground: 220 10% 35%;
+    --accent: 220 84% 45%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 350 89% 50%;
     --destructive-foreground: 0 0% 100%;
-    --ring: 239 84% 67%;
+    --ring: 239 84% 45%;
     --radius: 0.75rem;
+  }
+
+  /* Dark theme (nighttime) */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --background: 222 25% 5%;
+      --foreground: 220 15% 92%;
+      --card: 222 22% 8%;
+      --card-foreground: 220 15% 92%;
+      --border: 220 15% 13%;
+      --input: 220 15% 11%;
+      --primary: 239 84% 67%;
+      --primary-foreground: 0 0% 100%;
+      --secondary: 220 15% 13%;
+      --secondary-foreground: 220 10% 65%;
+      --muted: 220 15% 13%;
+      --muted-foreground: 220 10% 42%;
+      --accent: 220 15% 15%;
+      --accent-foreground: 220 10% 80%;
+      --destructive: 350 89% 60%;
+      --destructive-foreground: 0 0% 100%;
+      --ring: 239 84% 67%;
+    }
   }
 }
 
