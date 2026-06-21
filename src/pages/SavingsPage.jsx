@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Trash2, TrendingUp, DollarSign, CheckCircle2, Wifi, Edit3 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Trash2, TrendingUp, CheckCircle2, Wifi, Edit3 } from "lucide-react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -21,21 +21,77 @@ const STYPE_BADGE = {
   goal: "success" 
 };
 
+const formatDate = (date) => {
+  if (!date) return "";
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+};
+
+const getScheduledDebit = (saving) => {
+  if (!saving.debitDay) return null;
+  const day = Math.min(28, Math.max(1, Number(saving.debitDay) || 1));
+  const today = new Date();
+
+  const last = saving.lastDebitDate ? new Date(saving.lastDebitDate) : null;
+  const currentMonthDebit = new Date(today.getFullYear(), today.getMonth(), day);
+
+  if (!last) {
+    return currentMonthDebit <= today ? currentMonthDebit : null;
+  }
+
+  const nextMonthDebit = new Date(last.getFullYear(), last.getMonth() + 1, day);
+  return nextMonthDebit <= today ? nextMonthDebit : null;
+};
+
+const processAutoDebit = (saving) => {
+  if (!saving || !saving.monthlySavings || saving.current >= saving.target) return saving;
+  if (saving.contributionMode !== "auto" && saving.contributionMode !== "mixed") return saving;
+
+  let nextSaving = { ...saving };
+  let scheduled = getScheduledDebit(nextSaving);
+  if (!scheduled) return saving;
+
+  const added = Number(saving.monthlySavings) || 0;
+  while (scheduled && nextSaving.current < nextSaving.target) {
+    nextSaving = {
+      ...nextSaving,
+      current: Math.min((nextSaving.current || 0) + added, nextSaving.target),
+      lastDebitDate: formatDate(scheduled),
+    };
+    scheduled = getScheduledDebit(nextSaving);
+  }
+
+  return nextSaving;
+};
+
 export default function SavingsPage({ savings, setSavings, budgetSavings, synced, net }) {
   const [showAdd,     setShowAdd]     = useState(false);
   const [showDeposit, setShowDeposit] = useState(null);
   const [depositAmt,  setDepositAmt]  = useState("");
   const [editId,      setEditId]      = useState(null);
-  const [form, setForm] = useState({ name: "", monthlySavings: 0, durationMonths: 12, current: 0, type: "goal", icon: "TrendingUp", roi: 0 });
+  const [form, setForm] = useState({ name: "", monthlySavings: 0, durationMonths: 12, current: 0, type: "goal", vehicle: "fixed", contributionMode: "auto", debitDay: 1, lastDebitDate: "", icon: "TrendingUp", roi: 0 });
 
   // Calculate target amount using compound interest formula
-  const calculateTarget = (monthlySavings, roi, durationMonths) => {
-    const monthlyRate = (Number(roi) || 0) / 100 / 12;
+  const calculateTarget = (monthlySavings, roi, durationMonths, vehicle = "fixed") => {
     const months = Number(durationMonths) || 0;
-    if (monthlyRate === 0) return (Number(monthlySavings) || 0) * months;
-    const target = (Number(monthlySavings) || 0) * (Math.pow(1 + monthlyRate, months) - 1) / monthlyRate;
-    return Math.round(target);
+    const savedTotal = (Number(monthlySavings) || 0) * months;
+    if (vehicle === "mutual") {
+      const monthlyRate = (Number(roi) || 0) / 100 / 12;
+      if (monthlyRate === 0) return Math.round(savedTotal);
+      const estimated = (Number(monthlySavings) || 0) * (Math.pow(1 + monthlyRate, months) - 1) / monthlyRate;
+      return Math.round(estimated);
+    }
+    return Math.round(savedTotal);
   };
+
+  useEffect(() => {
+    const updated = savings.map((saving) => processAutoDebit(saving));
+    const changed = updated.some((saving, index) => saving !== savings[index]);
+    if (changed) {
+      setSavings(updated);
+    }
+  }, [savings, setSavings]);
 
   const totalTarget   = savings.reduce((s, sv) => s + (sv.target || 0), 0);
   const totalCurrent  = savings.reduce((s, sv) => s + (sv.current || 0), 0);
@@ -43,8 +99,8 @@ export default function SavingsPage({ savings, setSavings, budgetSavings, synced
   const monthlyBudget = Math.round(budgetSavings / 12); // Monthly savings budget
 
   const addSaving = () => {
-    if (!form.name || !form.monthlySavings) return;
-    const target = calculateTarget(form.monthlySavings, form.roi, form.durationMonths);
+    if (!form.name || (form.contributionMode !== "manual" && !form.monthlySavings)) return;
+    const target = calculateTarget(form.monthlySavings, form.roi, form.durationMonths, form.vehicle);
     const newSaving = {
       name: form.name,
       monthlySavings: Number(form.monthlySavings),
@@ -52,20 +108,24 @@ export default function SavingsPage({ savings, setSavings, budgetSavings, synced
       target: target,
       current: Number(form.current) || 0,
       type: form.type,
+      vehicle: form.vehicle,
+      contributionMode: form.contributionMode,
+      debitDay: Number(form.debitDay) || 1,
+      lastDebitDate: form.lastDebitDate || "",
       icon: form.icon,
       roi: Number(form.roi) || 0,
       id: Date.now(),
     };
     setSavings(p => [...p, newSaving]);
-    setForm({ name: "", monthlySavings: 0, durationMonths: 12, current: 0, type: "goal", icon: "TrendingUp", roi: 0 });
+    setForm({ name: "", monthlySavings: 0, durationMonths: 12, current: 0, type: "goal", vehicle: "fixed", contributionMode: "auto", debitDay: 1, lastDebitDate: "", icon: "TrendingUp", roi: 0 });
     setShowAdd(false);
   };
 
   const updateSaving = (id) => {
-    const target = calculateTarget(form.monthlySavings, form.roi, form.durationMonths);
-    setSavings(p => p.map(s => s.id === id ? { ...s, name: form.name, monthlySavings: Number(form.monthlySavings), durationMonths: Number(form.durationMonths), target, current: Number(form.current), type: form.type, roi: Number(form.roi) } : s));
+    const target = calculateTarget(form.monthlySavings, form.roi, form.durationMonths, form.vehicle);
+    setSavings(p => p.map(s => s.id === id ? { ...s, name: form.name, monthlySavings: Number(form.monthlySavings), durationMonths: Number(form.durationMonths), target, current: Number(form.current), type: form.type, vehicle: form.vehicle, contributionMode: form.contributionMode, debitDay: Number(form.debitDay) || 1, lastDebitDate: form.lastDebitDate || s.lastDebitDate || "", roi: Number(form.roi) } : s));
     setEditId(null);
-    setForm({ name: "", monthlySavings: 0, durationMonths: 12, current: 0, type: "goal", icon: "TrendingUp", roi: 0 });
+    setForm({ name: "", monthlySavings: 0, durationMonths: 12, current: 0, type: "goal", vehicle: "fixed", contributionMode: "auto", debitDay: 1, lastDebitDate: "", icon: "TrendingUp", roi: 0 });
   };
 
   const depositAmount = (id) => {
@@ -172,6 +232,26 @@ export default function SavingsPage({ savings, setSavings, budgetSavings, synced
                         <Badge variant={STYPE_BADGE[s.type] || "default"} className="text-[9px] uppercase">
                           {s.type}
                         </Badge>
+                        <Badge variant="outline" className="text-[9px] uppercase">
+                          {s.vehicle === "mutual" ? "Estimated" : "Fixed"}
+                        </Badge>
+                        <Badge variant="outline" className="text-[9px] uppercase">
+                          {s.contributionMode === "auto"
+                            ? "Auto debit"
+                            : s.contributionMode === "mixed"
+                              ? "Auto + Top-up"
+                              : "Manual"}
+                        </Badge>
+                        {(s.contributionMode === "auto" || s.contributionMode === "mixed") && s.debitDay && (
+                          <Badge variant="outline" className="text-[9px] uppercase">
+                            Day {s.debitDay}
+                          </Badge>
+                        )}
+                        {s.lastDebitDate && (
+                          <Badge variant="outline" className="text-[9px] uppercase">
+                            Last {formatDate(s.lastDebitDate)}
+                          </Badge>
+                        )}
                         {s.roi > 0 && (
                           <Badge variant="outline" className="text-[9px]">{s.roi}% ROI</Badge>
                         )}
@@ -186,7 +266,8 @@ export default function SavingsPage({ savings, setSavings, budgetSavings, synced
                         <Button size="icon-sm" variant="outline" 
                           onClick={() => {
                             setEditId(s.id);
-                            setForm({ name: s.name, monthlySavings: s.monthlySavings, durationMonths: s.durationMonths, current: s.current, type: s.type, icon: s.icon, roi: s.roi });
+
+                            setForm({ name: s.name, monthlySavings: s.monthlySavings, durationMonths: s.durationMonths, current: s.current, type: s.type, vehicle: s.vehicle || "fixed", contributionMode: s.contributionMode || "auto", debitDay: s.debitDay || 1, lastDebitDate: s.lastDebitDate || "", icon: s.icon, roi: s.roi });
                           }}>
                           <Edit3 size={11} />
                         </Button>
@@ -211,7 +292,9 @@ export default function SavingsPage({ savings, setSavings, budgetSavings, synced
                   <div className="flex items-center gap-1">
                     <TrendingUp size={12} className="text-muted-foreground" />
                     <span className="text-muted-foreground">
-                      {completed ? "✓ Complete!" : `${fmt(s.monthlySavings)}/mo for ${s.durationMonths} months`}
+                      {completed
+                        ? "✓ Complete!"
+                        : `${fmt(s.monthlySavings)}/mo · ${s.contributionMode === "auto" ? "Auto debit" : s.contributionMode === "mixed" ? "Auto + top-up" : "Manual deposit"}`}
                     </span>
                   </div>
                   <span className="font-mono font-semibold text-foreground">
@@ -250,10 +333,43 @@ export default function SavingsPage({ savings, setSavings, budgetSavings, synced
                 onChange={(e) => setForm({ ...form, durationMonths: e.target.value })} />
             </div>
             <div>
+              <label className="text-xs font-bold uppercase text-green-400">Savings Vehicle</label>
+              <Select value={form.vehicle} onChange={(e) => setForm({ ...form, vehicle: e.target.value })}>
+                <option value="fixed">RD/FD / Fixed return</option>
+                <option value="mutual">Mutual fund / Variable return</option>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase text-green-400">Contribution Mode</label>
+              <Select value={form.contributionMode} onChange={(e) => setForm({ ...form, contributionMode: e.target.value })}>
+                <option value="auto">Auto debit each month</option>
+                <option value="manual">Manual deposit / top-up</option>
+                <option value="mixed">Auto debit + manual top-up</option>
+              </Select>
+            </div>
+            {(form.contributionMode === "auto" || form.contributionMode === "mixed") && (
+              <div>
+                <label className="text-xs font-bold uppercase text-green-400">Debit Day of Month</label>
+                <Input type="number" placeholder="5"
+                  min={1}
+                  max={28}
+                  value={form.debitDay}
+                  onChange={(e) => setForm({ ...form, debitDay: Number(e.target.value) })} />
+              </div>
+            )}
+            <div>
               <label className="text-xs font-bold uppercase text-green-400">Expected ROI (%)</label>
               <Input type="number" placeholder="0"
                 value={form.roi}
                 onChange={(e) => setForm({ ...form, roi: e.target.value })} />
+            </div>
+            <div className="text-[10px] text-muted-foreground">
+              {form.vehicle === "mutual"
+                ? "Mutual fund returns are variable. target is an estimate based on your expected ROI."
+                : "Fixed instrument targets are based on total contributions rather than market returns."}
+              {form.contributionMode === "auto" && " Auto debit will occur on the selected debit day each month."}
+              {form.contributionMode === "mixed" && " Mixed plans auto debit monthly and allow manual top-ups."}
+              {form.contributionMode === "manual" && " Manual top-ups are recorded using the Add button."}
             </div>
             <div>
               <label className="text-xs font-bold uppercase text-green-400">Current Amount</label>
@@ -268,12 +384,6 @@ export default function SavingsPage({ savings, setSavings, budgetSavings, synced
                 <option value="investment">Investment</option>
                 <option value="goal">Goal</option>
               </Select>
-            </div>
-            <div>
-              <label className="text-xs font-bold uppercase text-green-400">Expected ROI (%)</label>
-              <Input type="number" placeholder="0"
-                value={form.roi}
-                onChange={(e) => setForm({ ...form, roi: e.target.value })} />
             </div>
             <div className="flex gap-2 pt-2">
               <Button className="flex-1" onClick={addSaving}>Create</Button>
@@ -333,10 +443,40 @@ export default function SavingsPage({ savings, setSavings, budgetSavings, synced
                 onChange={(e) => setForm({ ...form, durationMonths: e.target.value })} />
             </div>
             <div>
+              <label className="text-xs font-bold uppercase text-white mb-2 block">Savings Vehicle</label>
+              <Select value={form.vehicle} onChange={(e) => setForm({ ...form, vehicle: e.target.value })}>
+                <option value="fixed">RD/FD / Fixed return</option>
+                <option value="mutual">Mutual fund / Variable return</option>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase text-white mb-2 block">Contribution Mode</label>
+              <Select value={form.contributionMode} onChange={(e) => setForm({ ...form, contributionMode: e.target.value })}>
+                <option value="auto">Auto debit each month</option>
+                <option value="manual">Manual deposit / top-up</option>
+                <option value="mixed">Auto debit + manual top-up</option>
+              </Select>
+            </div>
+            {(form.contributionMode === "auto" || form.contributionMode === "mixed") && (
+              <div>
+                <label className="text-xs font-bold uppercase text-white mb-2 block">Debit Day of Month</label>
+                <Input type="number" placeholder="5"
+                  min={1}
+                  max={28}
+                  value={form.debitDay}
+                  onChange={(e) => setForm({ ...form, debitDay: Number(e.target.value) })} />
+              </div>
+            )}
+            <div>
               <label className="text-xs font-bold uppercase text-white mb-2 block">Expected ROI (%)</label>
               <Input type="number" placeholder="0"
                 value={form.roi}
                 onChange={(e) => setForm({ ...form, roi: e.target.value })} />
+            </div>
+            <div className="text-[10px] text-muted-foreground">
+              {form.vehicle === "mutual"
+                ? "Mutual fund target is an estimate and may vary with market returns."
+                : "Fixed target is based on committed monthly savings and duration."}
             </div>
             <div>
               <label className="text-xs font-bold uppercase text-white mb-2 block">Current Amount</label>

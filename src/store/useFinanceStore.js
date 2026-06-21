@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const STORE_KEY = "financeos_v2";
 const BC_NAME = "financeos_bc_v2";
@@ -25,9 +25,9 @@ export const DEFAULT_FIXED = [
 ];
 
 export const DEFAULT_SAVINGS = [
-  { id: 1, name: "Emergency Fund",  monthlySavings: 5000, durationMonths: 12, target: 50000, current: 15000, type: "emergency", icon: "AlertCircle", roi: 4 },
-  { id: 2, name: "Index Funds",     monthlySavings: 8000, durationMonths: 12, target: 100000, current: 25000, type: "investment", icon: "TrendingUp", roi: 12 },
-  { id: 3, name: "Vacation Fund",   monthlySavings: 3000, durationMonths: 10, target: 30000, current: 8000, type: "goal", icon: "Plane", roi: 0 },
+  { id: 1, name: "Emergency Fund",  monthlySavings: 5000, durationMonths: 12, target: 50000, current: 15000, type: "emergency", vehicle: "fixed", contributionMode: "auto", icon: "AlertCircle", roi: 4 },
+  { id: 2, name: "Index Funds",     monthlySavings: 8000, durationMonths: 12, target: 100000, current: 25000, type: "investment", vehicle: "mutual", contributionMode: "mixed", icon: "TrendingUp", roi: 12 },
+  { id: 3, name: "Vacation Fund",   monthlySavings: 3000, durationMonths: 10, target: 30000, current: 8000, type: "goal", vehicle: "fixed", contributionMode: "manual", icon: "Plane", roi: 0 },
 ];
 
 export const BUDGET_RULES = {
@@ -41,7 +41,9 @@ function loadState() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch (error) {
+    console.warn("Failed to load saved state", error);
+  }
   return null;
 }
 
@@ -84,18 +86,33 @@ export function useFinanceStore() {
           setSavings(p.savings || DEFAULT_SAVINGS);
         }
       };
-    } catch {}
-    return () => { try { bcRef.current?.close(); } catch {} };
+    } catch (error) {
+      console.warn("BroadcastChannel unavailable", error);
+    }
+    return () => {
+      try {
+        bcRef.current?.close();
+      } catch (error) {
+        console.warn("Failed to close BroadcastChannel", error);
+      }
+    };
   }, []);
 
   // Persist on every change
   useEffect(() => {
     const data = { salary, ruleMode, emis, dailyEntries, wishes, fixedExpenses, savings };
     localStorage.setItem(STORE_KEY, JSON.stringify(data));
-    try { bcRef.current?.postMessage({ type: "SYNC", payload: data }); } catch {}
-    setSynced(true);
-    const t = setTimeout(() => setSynced(false), 1400);
-    return () => clearTimeout(t);
+    try {
+      bcRef.current?.postMessage({ type: "SYNC", payload: data });
+    } catch (error) {
+      console.warn("Broadcast sync failed", error);
+    }
+    const syncOn = setTimeout(() => setSynced(true), 0);
+    const syncOff = setTimeout(() => setSynced(false), 1400);
+    return () => {
+      clearTimeout(syncOn);
+      clearTimeout(syncOff);
+    };
   }, [salary, ruleMode, emis, dailyEntries, wishes, fixedExpenses, savings]);
 
   // ── Derived values ───────────────────────────────────────────
