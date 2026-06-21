@@ -25,9 +25,9 @@ export const DEFAULT_FIXED = [
 ];
 
 export const DEFAULT_SAVINGS = [
-  { id: 1, name: "Emergency Fund",  target: 50000, current: 15000, type: "emergency", icon: "AlertCircle", roi: 4 },
-  { id: 2, name: "Index Funds",     target: 100000, current: 25000, type: "investment", icon: "TrendingUp", roi: 12 },
-  { id: 3, name: "Vacation Fund",   target: 30000, current: 8000, type: "goal", icon: "Plane", roi: 0 },
+  { id: 1, name: "Emergency Fund",  monthlySavings: 5000, durationMonths: 12, target: 50000, current: 15000, type: "emergency", icon: "AlertCircle", roi: 4 },
+  { id: 2, name: "Index Funds",     monthlySavings: 8000, durationMonths: 12, target: 100000, current: 25000, type: "investment", icon: "TrendingUp", roi: 12 },
+  { id: 3, name: "Vacation Fund",   monthlySavings: 3000, durationMonths: 10, target: 30000, current: 8000, type: "goal", icon: "Plane", roi: 0 },
 ];
 
 export const BUDGET_RULES = {

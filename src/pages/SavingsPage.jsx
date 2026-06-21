@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { Plus, Trash2, TrendingUp, DollarSign, CheckCircle2, Wifi, Edit3, Check, X } from "lucide-react";
+import { Plus, Trash2, TrendingUp, DollarSign, CheckCircle2, Wifi, Edit3 } from "lucide-react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { Progress } from "../components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog";
-import { fmt, fmtDate, pct } from "../lib/utils";
-import { ICON_KEYS, DynIcon } from "../lib/constants";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
+import { fmt, pct } from "../lib/utils";
+import { DynIcon } from "../lib/constants";
 
 const STYPE_COLOR = { 
   emergency: "#ef4444", 
@@ -21,12 +21,21 @@ const STYPE_BADGE = {
   goal: "success" 
 };
 
-export default function SavingsPage({ savings, setSavings, surplus, budgetSavings, synced, net }) {
+export default function SavingsPage({ savings, setSavings, budgetSavings, synced, net }) {
   const [showAdd,     setShowAdd]     = useState(false);
   const [showDeposit, setShowDeposit] = useState(null);
   const [depositAmt,  setDepositAmt]  = useState("");
   const [editId,      setEditId]      = useState(null);
-  const [form, setForm] = useState({ name: "", target: "", current: 0, type: "goal", icon: "TrendingUp", roi: 0 });
+  const [form, setForm] = useState({ name: "", monthlySavings: 0, durationMonths: 12, current: 0, type: "goal", icon: "TrendingUp", roi: 0 });
+
+  // Calculate target amount using compound interest formula
+  const calculateTarget = (monthlySavings, roi, durationMonths) => {
+    const monthlyRate = (Number(roi) || 0) / 100 / 12;
+    const months = Number(durationMonths) || 0;
+    if (monthlyRate === 0) return (Number(monthlySavings) || 0) * months;
+    const target = (Number(monthlySavings) || 0) * (Math.pow(1 + monthlyRate, months) - 1) / monthlyRate;
+    return Math.round(target);
+  };
 
   const totalTarget   = savings.reduce((s, sv) => s + (sv.target || 0), 0);
   const totalCurrent  = savings.reduce((s, sv) => s + (sv.current || 0), 0);
@@ -34,23 +43,29 @@ export default function SavingsPage({ savings, setSavings, surplus, budgetSaving
   const monthlyBudget = Math.round(budgetSavings / 12); // Monthly savings budget
 
   const addSaving = () => {
-    if (!form.name || !form.target) return;
+    if (!form.name || !form.monthlySavings) return;
+    const target = calculateTarget(form.monthlySavings, form.roi, form.durationMonths);
     const newSaving = {
-      ...form,
-      id: Date.now(),
-      target: Number(form.target),
+      name: form.name,
+      monthlySavings: Number(form.monthlySavings),
+      durationMonths: Number(form.durationMonths),
+      target: target,
       current: Number(form.current) || 0,
+      type: form.type,
+      icon: form.icon,
       roi: Number(form.roi) || 0,
+      id: Date.now(),
     };
     setSavings(p => [...p, newSaving]);
-    setForm({ name: "", target: "", current: 0, type: "goal", icon: "TrendingUp", roi: 0 });
+    setForm({ name: "", monthlySavings: 0, durationMonths: 12, current: 0, type: "goal", icon: "TrendingUp", roi: 0 });
     setShowAdd(false);
   };
 
   const updateSaving = (id) => {
-    setSavings(p => p.map(s => s.id === id ? { ...s, ...form } : s));
+    const target = calculateTarget(form.monthlySavings, form.roi, form.durationMonths);
+    setSavings(p => p.map(s => s.id === id ? { ...s, name: form.name, monthlySavings: Number(form.monthlySavings), durationMonths: Number(form.durationMonths), target, current: Number(form.current), type: form.type, roi: Number(form.roi) } : s));
     setEditId(null);
-    setForm({ name: "", target: "", current: 0, type: "goal", icon: "TrendingUp", roi: 0 });
+    setForm({ name: "", monthlySavings: 0, durationMonths: 12, current: 0, type: "goal", icon: "TrendingUp", roi: 0 });
   };
 
   const depositAmount = (id) => {
@@ -73,7 +88,7 @@ export default function SavingsPage({ savings, setSavings, surplus, budgetSaving
   });
 
   return (
-    <div className="animate-slide-up pb-24">
+    <div className="animate-slide-up pb-24 bg-slate-50 dark:bg-slate-900 min-h-screen">
       {/* Header */}
       <div className="sticky top-0 z-50 border-b border-border/50 bg-background/90 backdrop-blur-xl px-4 py-3">
         <div className="flex items-center justify-between">
@@ -95,12 +110,12 @@ export default function SavingsPage({ savings, setSavings, surplus, budgetSaving
         <Card className="border-indigo-500/25 bg-indigo-500/5">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
-              <DollarSign size={14} className="text-indigo-400" />
+              {/* <DollarSign size={14} className="text-indigo-400" /> */}
               <span className="font-bold text-xs">Monthly Savings Budget</span>
             </div>
             <p className="font-mono text-2xl font-extrabold text-indigo-400">{fmt(monthlyBudget)}</p>
             <p className="text-[11px] text-muted-foreground mt-1">
-              20-30% of your ₹{fmt(Math.round(net))} net salary
+              20-30% of your {fmt(Math.round(net))} net salary
             </p>
           </CardContent>
         </Card>
@@ -138,7 +153,6 @@ export default function SavingsPage({ savings, setSavings, surplus, budgetSaving
           const remaining = s.target - (s.current || 0);
           const color = STYPE_COLOR[s.type] || "#8b5cf6";
           const completed = remaining <= 0;
-          const monthsNeeded = monthlyBudget > 0 ? Math.ceil(remaining / monthlyBudget) : "∞";
 
           return (
             <Card key={s.id} className={completed ? "border-emerald-500/35" : ""}>
@@ -172,7 +186,7 @@ export default function SavingsPage({ savings, setSavings, surplus, budgetSaving
                         <Button size="icon-sm" variant="outline" 
                           onClick={() => {
                             setEditId(s.id);
-                            setForm({ name: s.name, target: s.target, current: s.current, type: s.type, icon: s.icon, roi: s.roi });
+                            setForm({ name: s.name, monthlySavings: s.monthlySavings, durationMonths: s.durationMonths, current: s.current, type: s.type, icon: s.icon, roi: s.roi });
                           }}>
                           <Edit3 size={11} />
                         </Button>
@@ -197,11 +211,11 @@ export default function SavingsPage({ savings, setSavings, surplus, budgetSaving
                   <div className="flex items-center gap-1">
                     <TrendingUp size={12} className="text-muted-foreground" />
                     <span className="text-muted-foreground">
-                      {completed ? "✓ Complete!" : `${monthsNeeded} months at ₹${fmt(monthlyBudget)}/mo`}
+                      {completed ? "✓ Complete!" : `${fmt(s.monthlySavings)}/mo for ${s.durationMonths} months`}
                     </span>
                   </div>
                   <span className="font-mono font-semibold text-foreground">
-                    {completed ? "+0" : `-₹${fmt(remaining)}`}
+                    {completed ? "+0" : `-${fmt(remaining)}`}
                   </span>
                 </div>
               </CardContent>
@@ -214,29 +228,41 @@ export default function SavingsPage({ savings, setSavings, surplus, budgetSaving
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Savings Goal</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-green-400">Create Savings Goal</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <label className="text-xs font-bold uppercase">Name</label>
+              <label className="text-xs font-bold uppercase text-green-400">Name</label>
               <Input placeholder="e.g., Emergency Fund"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
             <div>
-              <label className="text-xs font-bold uppercase">Target Amount</label>
-              <Input type="number" placeholder="50000"
-                value={form.target}
-                onChange={(e) => setForm({ ...form, target: e.target.value })} />
+              <label className="text-xs font-bold uppercase text-green-400">Monthly Savings Amount</label>
+              <Input type="number" placeholder="5000"
+                value={form.monthlySavings}
+                onChange={(e) => setForm({ ...form, monthlySavings: e.target.value })} />
             </div>
             <div>
-              <label className="text-xs font-bold uppercase">Current Amount</label>
+              <label className="text-xs font-bold uppercase text-green-400">Duration (Months)</label>
+              <Input type="number" placeholder="12"
+                value={form.durationMonths}
+                onChange={(e) => setForm({ ...form, durationMonths: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase text-green-400">Expected ROI (%)</label>
+              <Input type="number" placeholder="0"
+                value={form.roi}
+                onChange={(e) => setForm({ ...form, roi: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase text-green-400">Current Amount</label>
               <Input type="number" placeholder="0"
                 value={form.current}
                 onChange={(e) => setForm({ ...form, current: e.target.value })} />
             </div>
             <div>
-              <label className="text-xs font-bold uppercase">Type</label>
+              <label className="text-xs font-bold uppercase text-green-400">Type</label>
               <Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
                 <option value="emergency">Emergency Fund</option>
                 <option value="investment">Investment</option>
@@ -244,7 +270,7 @@ export default function SavingsPage({ savings, setSavings, surplus, budgetSaving
               </Select>
             </div>
             <div>
-              <label className="text-xs font-bold uppercase">Expected ROI (%)</label>
+              <label className="text-xs font-bold uppercase text-green-400">Expected ROI (%)</label>
               <Input type="number" placeholder="0"
                 value={form.roi}
                 onChange={(e) => setForm({ ...form, roi: e.target.value })} />
@@ -289,36 +315,42 @@ export default function SavingsPage({ savings, setSavings, surplus, budgetSaving
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <label className="text-xs font-bold uppercase">Name</label>
+              <label className="text-xs font-bold uppercase text-white mb-2 block">Name</label>
               <Input placeholder="e.g., Emergency Fund"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
             <div>
-              <label className="text-xs font-bold uppercase">Target Amount</label>
-              <Input type="number" placeholder="50000"
-                value={form.target}
-                onChange={(e) => setForm({ ...form, target: e.target.value })} />
+              <label className="text-xs font-bold uppercase text-white mb-2 block">Monthly Savings Amount</label>
+              <Input type="number" placeholder="5000"
+                value={form.monthlySavings}
+                onChange={(e) => setForm({ ...form, monthlySavings: e.target.value })} />
             </div>
             <div>
-              <label className="text-xs font-bold uppercase">Current Amount</label>
+              <label className="text-xs font-bold uppercase text-white mb-2 block">Duration (Months)</label>
+              <Input type="number" placeholder="12"
+                value={form.durationMonths}
+                onChange={(e) => setForm({ ...form, durationMonths: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase text-white mb-2 block">Expected ROI (%)</label>
+              <Input type="number" placeholder="0"
+                value={form.roi}
+                onChange={(e) => setForm({ ...form, roi: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase text-white mb-2 block">Current Amount</label>
               <Input type="number" placeholder="0"
                 value={form.current}
                 onChange={(e) => setForm({ ...form, current: e.target.value })} />
             </div>
             <div>
-              <label className="text-xs font-bold uppercase">Type</label>
+              <label className="text-xs font-bold uppercase text-white mb-2 block">Type</label>
               <Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
                 <option value="emergency">Emergency Fund</option>
                 <option value="investment">Investment</option>
                 <option value="goal">Goal</option>
               </Select>
-            </div>
-            <div>
-              <label className="text-xs font-bold uppercase">Expected ROI (%)</label>
-              <Input type="number" placeholder="0"
-                value={form.roi}
-                onChange={(e) => setForm({ ...form, roi: e.target.value })} />
             </div>
             <div className="flex gap-2 pt-2">
               <Button className="flex-1" onClick={() => updateSaving(editId)}>Update</Button>
