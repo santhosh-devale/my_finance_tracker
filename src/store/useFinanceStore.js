@@ -24,6 +24,12 @@ export const DEFAULT_FIXED = [
   { id: 3, name: "Parents Support", amount: 10000, type: "need", icon: "HeartHandshake" },
 ];
 
+export const DEFAULT_SAVINGS = [
+  { id: 1, name: "Emergency Fund",  target: 50000, current: 15000, type: "emergency", icon: "AlertCircle", roi: 4 },
+  { id: 2, name: "Index Funds",     target: 100000, current: 25000, type: "investment", icon: "TrendingUp", roi: 12 },
+  { id: 3, name: "Vacation Fund",   target: 30000, current: 8000, type: "goal", icon: "Plane", roi: 0 },
+];
+
 export const BUDGET_RULES = {
   "50-30-20": { needs: 0.50, wants: 0.30, savings: 0.20 },
   "50-20-30": { needs: 0.50, wants: 0.20, savings: 0.30 },
@@ -50,6 +56,7 @@ export function useFinanceStore() {
     dailyEntries: [],
     wishes: DEFAULT_WISHES,
     fixedExpenses: DEFAULT_FIXED,
+    savings: DEFAULT_SAVINGS,
   };
 
   const [salary,       setSalary]       = useState(init.salary);
@@ -58,6 +65,7 @@ export function useFinanceStore() {
   const [dailyEntries, setDailyEntries] = useState(init.dailyEntries || []);
   const [wishes,       setWishes]       = useState(init.wishes);
   const [fixedExpenses,setFixedExpenses]= useState(init.fixedExpenses || DEFAULT_FIXED);
+  const [savings,      setSavings]      = useState(init.savings || DEFAULT_SAVINGS);
   const [synced,       setSynced]       = useState(false);
 
   // BroadcastChannel for cross-tab sync
@@ -73,6 +81,7 @@ export function useFinanceStore() {
           setDailyEntries(p.dailyEntries);
           setWishes(p.wishes);
           setFixedExpenses(p.fixedExpenses || DEFAULT_FIXED);
+          setSavings(p.savings || DEFAULT_SAVINGS);
         }
       };
     } catch {}
@@ -81,13 +90,13 @@ export function useFinanceStore() {
 
   // Persist on every change
   useEffect(() => {
-    const data = { salary, ruleMode, emis, dailyEntries, wishes, fixedExpenses };
+    const data = { salary, ruleMode, emis, dailyEntries, wishes, fixedExpenses, savings };
     localStorage.setItem(STORE_KEY, JSON.stringify(data));
     try { bcRef.current?.postMessage({ type: "SYNC", payload: data }); } catch {}
     setSynced(true);
     const t = setTimeout(() => setSynced(false), 1400);
     return () => clearTimeout(t);
-  }, [salary, ruleMode, emis, dailyEntries, wishes, fixedExpenses]);
+  }, [salary, ruleMode, emis, dailyEntries, wishes, fixedExpenses, savings]);
 
   // ── Derived values ───────────────────────────────────────────
   const tds        = salary * 0.10;
@@ -147,6 +156,7 @@ export function useFinanceStore() {
     dailyEntries, setDailyEntries,
     wishes, setWishes,
     fixedExpenses, setFixedExpenses,
+    savings, setSavings,
     synced,
     // derived
     tds, net, rule,

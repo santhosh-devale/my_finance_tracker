@@ -1,16 +1,18 @@
 import { useState } from "react";
-import { Home, Calendar, Landmark, Star, BarChart3 } from "lucide-react";
+import { Home, Calendar, Landmark, Star, BarChart3, PiggyBank } from "lucide-react";
 import { useFinanceStore } from "./store/useFinanceStore";
 import Dashboard    from "./pages/Dashboard";
 import CalendarPage from "./pages/CalendarPage";
 import EMIsPage     from "./pages/EMIsPage";
 import WishlistPage from "./pages/WishlistPage";
+import SavingsPage  from "./pages/SavingsPage";
 import InsightsPage from "./pages/InsightsPage";
 
 const TABS = [
   { id: "dashboard", label: "Home",     Icon: Home      },
   { id: "calendar",  label: "Calendar", Icon: Calendar  },
   { id: "emis",      label: "EMIs",     Icon: Landmark  },
+  { id: "savings",   label: "Savings",  Icon: PiggyBank },
   { id: "wishlist",  label: "Wishlist", Icon: Star      },
   { id: "insights",  label: "Insights", Icon: BarChart3 },
 ];
@@ -26,6 +28,7 @@ export default function App() {
         {tab === "dashboard" && <Dashboard    {...sharedProps} />}
         {tab === "calendar"  && <CalendarPage {...sharedProps} />}
         {tab === "emis"      && <EMIsPage     {...sharedProps} />}
+        {tab === "savings"   && <SavingsPage  {...sharedProps} />}
         {tab === "wishlist"  && <WishlistPage {...sharedProps} />}
         {tab === "insights"  && <InsightsPage {...sharedProps} />}
       </div>
