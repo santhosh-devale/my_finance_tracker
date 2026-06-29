@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Calendar, Landmark, Star, BarChart3, PiggyBank } from "lucide-react";
+import { Home, Calendar, Landmark, Star, BarChart3, PiggyBank, X } from "lucide-react";
 import { useFinanceStore } from "./store/useFinanceStore";
 import Dashboard    from "./pages/Dashboard";
 import CalendarPage from "./pages/CalendarPage";
@@ -17,10 +17,41 @@ const TABS = [
   { id: "insights",  label: "Insights", Icon: BarChart3 },
 ];
 
+const DEFAULT_AD_IMAGE =
+  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA4MDAgNDUwJz4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0nZycgeDE9JzAnIHkxPScwJyB4Mj0nMScgeTI9JzEnPgogICAgICA8c3RvcCBvZmZzZXQ9JzAnIHN0b3AtY29sb3I9JyM2MzY2ZjEnLz4KICAgICAgPHN0b3Agb2Zmc2V0PScxJyBzdG9wLWNvbG9yPScjYThhNWY3Jy8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDxyZWN0IHg9JzAnIHk9JzAnIHdpZHRoPSc4MDAnIGhlaWdodD0nNDUwJyBmaWxsPScndXJsKCNnKScvPgogIDxyZWN0IHg9JzAwJyB5PScwJyB3aWR0aD0nODAwJyBoZWlnaHQ9JzQ1MCcgZmlsbD0nI2ZmZmZmZicgZmlsbC1vcGFjaXR5PScwLjMnIC8+CiA8L3N2Zz4=";
+
 export default function App() {
   const [tab, setTab] = useState("dashboard");
+  const [showAd, setShowAd] = useState(true);
+  const [adImage, setAdImage] = useState(() => {
+    try {
+      return localStorage.getItem("financeos_launch_ad") || DEFAULT_AD_IMAGE;
+    } catch {
+      return DEFAULT_AD_IMAGE;
+    }
+  });
+
   const store = useFinanceStore();
-  const sharedProps = { ...store, setTab };
+
+  const handleUpload = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setAdImage(reader.result);
+        try {
+          localStorage.setItem("financeos_launch_ad", reader.result);
+        } catch (error) {
+          console.warn("Unable to save launch image", error);
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const sharedProps = { ...store, setTab, handleUpload };
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
@@ -33,7 +64,27 @@ export default function App() {
         {tab === "insights"  && <InsightsPage {...sharedProps} />}
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-2xl border-t border-border/60"
+      {showAd && (
+        <div className="fixed inset-0 z-50 bg-black/90 p-6 sm:p-8">
+          <div className="relative h-full w-full overflow-hidden rounded-[30px] border border-white/10 shadow-2xl shadow-black/50">
+            <button
+              type="button"
+              onClick={() => setShowAd(false)}
+              className="absolute right-4 top-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white shadow-lg shadow-black/30 transition hover:bg-white/25"
+            >
+              <X size={18} />
+            </button>
+
+            <img
+              src={adImage}
+              alt="Launch advertisement"
+              className="h-full w-full object-cover"
+            />
+          </div>
+        </div>
+      )}
+
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-2xl border-t border-border/60"
            style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         <div className="flex max-w-[430px] mx-auto">
           {TABS.map(({ id, label, Icon }) => {

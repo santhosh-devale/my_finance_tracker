@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   TrendingUp, TrendingDown, CreditCard, Landmark, Edit3, Check, X,
   Trophy, Flag, Bell, Wifi, Target, AlertCircle, AlertTriangle, CheckCircle2, Info,
+  UploadCloud,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -27,7 +28,7 @@ export default function Dashboard({
   totalEMI, totalDebt, todaySpend, dailyAllow,
   thisMonthSpend, surplus, savRate, emiPct,
   alerts, flagged, synced, score, setTab,
-  dailyEntries, thisMonthEntries,
+  dailyEntries, thisMonthEntries, handleUpload,
 }) {
   const [editSal, setEditSal] = useState(false);
   const [si, setSi] = useState(salary);
@@ -72,6 +73,16 @@ export default function Dashboard({
                 <Wifi size={9} /> Live
               </Badge>
             )}
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-border bg-slate-900 px-3 py-2 text-[11px] font-bold text-white transition hover:border-indigo-400 hover:text-indigo-200">
+              <UploadCloud size={14} />
+              <span>Upload launch image</span>
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={handleUpload}
+              />
+            </label>
             {alerts.some(a => a.kind === "danger") && (
               <Button variant="outline" size="icon" onClick={() => setTab("insights")}
                 className="relative border-red-500/25 bg-red-500/10 hover:bg-red-500/20 w-9 h-9">
