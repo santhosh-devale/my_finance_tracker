@@ -36,7 +36,7 @@ function generatePDF({ salary, net, tds, ruleMode, budgetNeeds, budgetWants, bud
   }
 
   const html = `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>FinanceOS Report – ${label}</title>
+<html><head><meta charset="UTF-8"><title>Devale's Finance Report – ${label}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=DM+Mono:wght@400;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -71,7 +71,7 @@ tr:last-child td{border-bottom:none}
 <div class="page">
 <div class="hdr">
   <div>
-    <div class="logo">FinanceOS</div>
+    <div class="logo">Devale's Finance</div>
     <div style="font-size:11px;color:#94a3b8;margin-top:3px">Financial Freedom Tracker</div>
   </div>
   <div style="text-align:right">
@@ -169,7 +169,7 @@ ${flagged.length > 0 ? `
 </div>
 
 <div class="footer">
-  <span>FinanceOS · Financial Freedom Tracker</span>
+  <span>Devale's Finance · Financial Freedom Tracker</span>
   <span>${now.toLocaleDateString("en-IN")} ${now.toLocaleTimeString("en-IN")}</span>
 </div>
 </div>

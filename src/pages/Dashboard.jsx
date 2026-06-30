@@ -62,7 +62,7 @@ export default function Dashboard({
       <div className="sticky top-0 z-50 border-b border-border/50 bg-background/90 backdrop-blur-xl px-4 py-3">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-extrabold tracking-tight">FinanceOS</h1>
+            <h1 className="text-lg font-extrabold tracking-tight">Devale's Finance</h1>
             <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mt-0.5">
               Financial Freedom Tracker
             </p>
