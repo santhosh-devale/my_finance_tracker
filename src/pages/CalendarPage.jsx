@@ -121,7 +121,7 @@ export default function CalendarPage({ dailyEntries, setDailyEntries, dailyAllow
 
             {/* Calendar grid */}
             <div className="grid grid-cols-7 gap-1">
-              {Array.from({ length: firstDow === 0 ? 6 : firstDow - 1 }).map((_, i) => <div key={"e" + i} />)}
+              {Array.from({ length: firstDow }).map((_, i) => <div key={"e" + i} />)}
               {Array.from({ length: daysInMonth }).map((_, i) => {
                 const day = i + 1;
                 const dk  = `${monthStr}-${String(day).padStart(2, "0")}`;
